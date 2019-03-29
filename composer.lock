@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "14f347b537b32f59b19e0cddb66d81e5",
+    "content-hash": "3c8c0e1cadc4d1a250c9489d7b758127",
     "packages": [
         {
             "name": "alchemy/binary-driver",
@@ -2503,6 +2503,50 @@
                 "uuid"
             ],
             "time": "2018-07-19T23:38:55+00:00"
+        },
+        {
+            "name": "sergeyhartmann/streaming-link-generator",
+            "version": "0.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/sergeyhartmann/streaming-link-generator.git",
+                "reference": "f8e8bb76b159a18c4d0f702763e8a97e6807d3ec"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/sergeyhartmann/streaming-link-generator/zipball/f8e8bb76b159a18c4d0f702763e8a97e6807d3ec",
+                "reference": "f8e8bb76b159a18c4d0f702763e8a97e6807d3ec",
+                "shasum": ""
+            },
+            "require": {
+                "guzzlehttp/guzzle": "^6.3",
+                "php": ">=7.1.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "SergeyHartmann\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Sergey Hartmann",
+                    "email": "sergeyhartmann@yandex.com"
+                }
+            ],
+            "description": "Grab video streaming link from Google Drive.",
+            "keywords": [
+                "generate link",
+                "google drive",
+                "googlevideo",
+                "redirector",
+                "streaming link"
+            ],
+            "time": "2017-11-26T21:48:05+00:00"
         },
         {
             "name": "swiftmailer/swiftmailer",
