@@ -26,9 +26,9 @@ class ConvertVideoForStreaming implements ShouldQueue
     public function handle()
     {
         // create some video formats...
-        $lowBitrateFormat  = (new X264)->setKiloBitrate(500);
-        $midBitrateFormat  = (new X264)->setKiloBitrate(1500);
-        $highBitrateFormat = (new X264)->setKiloBitrate(3000);
+        $lowBitrateFormat  = (new X264('aac'))->setKiloBitrate(3000);
+        $midBitrateFormat  = (new X264('aac'))->setKiloBitrate(4800);
+        $highBitrateFormat = (new X264('aac'))->setKiloBitrate(8000);
 
         // open the uploaded video from the right disk...
         FFMpeg::fromDisk($this->video->disk)
@@ -36,7 +36,7 @@ class ConvertVideoForStreaming implements ShouldQueue
 
         // call the 'exportForHLS' method and specify the disk to which we want to export...
             ->exportForHLS()
-            ->toDisk('local')
+            ->toDisk('converted_videos')
 
         // we'll add different formats so the stream will play smoothly
         // with all kinds of internet connections...

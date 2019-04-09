@@ -15,6 +15,7 @@
         "nao-pon/flysystem-google-drive": "~1.1",
         "pbmedia/laravel-ffmpeg": "^4.0",
         "php-ffmpeg/php-ffmpeg": "^0.13.0",
+        "pion/laravel-chunk-upload": "^1.2",
         "sergeyhartmann/streaming-link-generator": "^0.0.1"
     },
     "require-dev": {

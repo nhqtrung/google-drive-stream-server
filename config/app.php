@@ -177,6 +177,7 @@ return [
 
         Pbmedia\LaravelFFMpeg\FFMpegServiceProvider::class,
         App\Providers\GoogleDriveServiceProvider::class,
+        \Pion\Laravel\ChunkUpload\Providers\ChunkUploadServiceProvider::class
     ],
 
     /*

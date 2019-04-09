@@ -11,9 +11,13 @@
 |
 */
 
-Route::get('/', 'convertController@testConvert');
+Route::get('test', function () {
+    Storage::cloud()->put('test.txt', 'Hello World');
+    return 'File was saved to Google Drive';
+});
 
-Route::get('/hls_file', 'convertController@getFile');
+
+Route::get('hls_file', 'convertController@getFile');
 
 Route::get('list', function() {
     $dir = '/';
@@ -61,3 +65,15 @@ Route::get('get', function() {
         ->header('ContentType', $file['mimetype'])
         ->header('Content-Disposition', "attachment; filename=$filename");
 });
+
+Route::get('hls/{fileId}', 'HLSController@redirectToStreamLink');
+
+Route::get('/', 'convertController@showFormInfo');
+
+Route::post('/', 'convertController@exportVideoForHls');
+
+
+// Route::post('/', 'VideoController@store');
+
+Route::get('file-upload', 'FileController@fileUpload');
+Route::post('file-upload', 'FileController@fileUploadPost')->name('fileUploadPost');
