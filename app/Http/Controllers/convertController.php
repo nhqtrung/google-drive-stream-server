@@ -12,15 +12,21 @@ use SergeyHartmann\StreamingLinkGenerator\StreamingLink;
 use SergeyHartmann\StreamingLinkGenerator\CookieLoader\SimpleCookieLoader;
 use App\Jobs\putFileInDirGoogleDrive;
 use App\Jobs\rewriteM3U8File;
+use App\Jobs\ConvertVideoForStreaming;
+use App\Video;
+use App\Export_progress;
 
 class convertController extends Controller
 {
     private $generator;
     private $cookieLoader;
+    private $exportProgress, $video;
     public function __construct()
     {
         $this->cookieLoader = new SimpleCookieLoader(dirname(__FILE__) . '/g.cookie');
         $this->generator    = new Generator($this->cookieLoader);
+        $this->exportProgress = new Export_progress;
+        $this->video = new Video;
     }
 
     public function showFormInfo() {
@@ -34,68 +40,29 @@ class convertController extends Controller
         $folder = $request['output-path'];
         $googleDriveFolder = $request['google-drive-folder'];
 
-        $lowBitrateFormat  = (new X264('aac'))->setKiloBitrate(3000);
-        $midBitrateFormat  = (new X264('aac'))->setKiloBitrate(4800);
-        $highBitrateFormat = (new X264('aac'))->setKiloBitrate(8000);
-        // open the uploaded video from the right disk...
-        FFMpeg::fromDisk('videos')
-            ->open($videoPath)
-            ->addFilter(function ($filters) {
-                $filters->resize(new \FFMpeg\Coordinate\Dimension(1920, 1080));
-            })
-            ->addFilter(function ($filters) {
-                $watermarkPath = 'videos/vtc4.png';
-                $filters->watermark($watermarkPath, [
-                    'position' => 'relative',
-                    'bottom' => 0,
-                    'right' => 0,
-                ]);
-            })
-            ->exportForHLS()
-            ->onProgress(function ($percentage) {
-                // echo "$percentage % transcoded";
-            })
-            ->toDisk('converted_videos')
-            // ->addFormat($lowBitrateFormat)
-            // ->addFormat($midBitrateFormat)
-            ->addFormat($lowBitrateFormat)
-            ->save($folder.'/EncryptedDocument_T5.m3u8');
+        $this->video->input_disk = 'videos';
+        $this->video->output_disk = 'converted_videos';
+        $this->video->input_path = $videoPath;
+        $this->video->output_path = $folder;
+        $this->video->watermark = $request->watermark ?? null;
+        $this->video->stream_link = null;
+        $this->video->google_drive_folder = $googleDriveFolder;
+        $this->video->status = null;
+        
+        $this->video->save();
 
-        //change all file extension from ts to txt
-        $hls_playlist = Storage::disk('converted_videos')->files($folder);
-        $storagePath = Storage::disk('converted_videos')->getAdapter()->getPathPrefix();
-        foreach($hls_playlist as $file) {
-            $file = str_replace('/', '\\', $file);
-            $fileInfo = explode('\\', $file);
-            $fileInfo = $fileInfo[sizeof($fileInfo) - 1];
-            $fileInfo = explode(".", $fileInfo);
-            $fileName = $fileInfo[sizeof($fileInfo) - 2];
-            $fileExtension = $fileInfo[sizeof($fileInfo) - 1];
+        $this->exportProgress->percentent_progress = 0;
+        $this->exportProgress->idVideo = $this->video->id;
+        $this->exportProgress->save();
 
-            if ($fileExtension == 'ts') {
-                $fileExtension = 'txt';
-                $filePath = $storagePath.$file;
-                $relativeFileName = $fileName.'.'.$fileExtension;
-                putFileInDirGoogleDrive::dispatch($googleDriveFolder, $relativeFileName, $filePath);
-            }
-
-            if ($fileExtension == 'm3u8') {
-                $filePath = $storagePath.$file;
-                $fileData = File::get($filePath);
-                if (strpos($fileData, "ts")) {
-                    $newFileData = str_replace("ts", "txt", $fileData);
-                    $relativeFileName = $fileName.'.'.$fileExtension;
-                    Storage::disk('converted_videos')->put($file, $newFileData);
-                }
-            }
-        }
-
-        rewriteM3U8File::dispatch($folder, $googleDriveFolder);
-
-        return "File $videoPath export for HLS Completed";
+        $inputPath = $this->video->input_path;
+        $folder = $this->video->output_path;
+        $googleDriveFolder = $this->video->google_drive_folder;
 
 
+        ConvertVideoForStreaming::dispatch($this->video, $this->exportProgress);
 
+        return response($this->exportProgress->id);
     }
 
     public function getFile() {
@@ -117,5 +84,10 @@ class convertController extends Controller
 
     public function getFileInFolder() {
 
+    }
+
+    public function VideoExportProgressAPI($progressId) {
+        $exportProgress = Export_progress::find($progressId);
+        return response()->json(['videoId' => $exportProgress->idVideo, 'percentent_progress' => $exportProgress->percentent_progress]);
     }
 }
