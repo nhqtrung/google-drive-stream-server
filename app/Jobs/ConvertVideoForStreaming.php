@@ -31,9 +31,8 @@ class ConvertVideoForStreaming implements ShouldQueue
 
     public function handle()
     {
-        // $this->export_progress->percentent_progress = 90;
-        // $this->export_progress->save();
-        // dd($this->export_progress);
+        $mainDisk = 'google';
+        $backupDisk = 'backup_google';
         $inputPath = $this->video->input_path;
         $folder = $this->video->output_path;
         $googleDriveFolder = $this->video->google_drive_folder;
@@ -49,16 +48,16 @@ class ConvertVideoForStreaming implements ShouldQueue
                 $filters->resize(new \FFMpeg\Coordinate\Dimension(1920, 1080));
             });
 
-        if ($this->video->watermark !== null && $this->video->watermark !== "") {
-            $ffmpegExportHLS->addFilter(function ($filters) {
-                $watermarkPath = $this->video->watermark;
-                $filters->watermark($watermarkPath, [
-                    'position' => 'relative',
-                    'bottom' => 0,
-                    'right' => 0,
-                ]);
-            });
-        }
+        // if (!empty($this->video->watermark)) {
+        //     $ffmpegExportHLS->addFilter(function ($filters) {
+        //         $watermarkPath = $this->video->watermark;
+        //         $filters->watermark($watermarkPath, [
+        //             'position' => 'relative',
+        //             'bottom' => 0,
+        //             'right' => 0,
+        //         ]);
+        //     });
+        // }
 
 
         $ffmpegExportHLS->exportForHLS()
@@ -92,9 +91,11 @@ class ConvertVideoForStreaming implements ShouldQueue
                 $fileExtension = 'txt';
                 $filePath = $storagePath.$file;
                 $relativeFileName = $fileName.'.'.$fileExtension;
-                putFileInDirGoogleDrive::dispatch($googleDriveFolder, $relativeFileName, $filePath);
+                // putFileInDirGoogleDrive::dispatch($googleDriveFolder, $relativeFileName, $filePath, $mainDisk);
+                // putFileInDirGoogleDrive::dispatch($googleDriveFolder, $relativeFileName, $filePath, $backupDisk);
             }
-
+            $this->video->status = "Upload all segment file TS to Google Drive";
+            $this->video->save();
             if ($fileExtension == 'm3u8') {
                 $filePath = $storagePath.$file;
                 $fileData = File::get($filePath);
@@ -106,6 +107,7 @@ class ConvertVideoForStreaming implements ShouldQueue
             }
         }
 
-        rewriteM3U8File::dispatch($folder, $googleDriveFolder);
+        // rewriteM3U8File::dispatch($folder, $googleDriveFolder, $mainDisk);
+        // rewriteM3U8File::dispatch($folder, $googleDriveFolder, $backupDisk);
     }
 }

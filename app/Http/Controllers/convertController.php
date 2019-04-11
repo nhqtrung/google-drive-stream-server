@@ -44,7 +44,7 @@ class convertController extends Controller
         $this->video->output_disk = 'converted_videos';
         $this->video->input_path = $videoPath;
         $this->video->output_path = $folder;
-        $this->video->watermark = $request->watermark ?? null;
+        $this->video->watermark = $request->watermark;
         $this->video->stream_link = null;
         $this->video->google_drive_folder = $googleDriveFolder;
         $this->video->status = null;
@@ -55,14 +55,9 @@ class convertController extends Controller
         $this->exportProgress->idVideo = $this->video->id;
         $this->exportProgress->save();
 
-        $inputPath = $this->video->input_path;
-        $folder = $this->video->output_path;
-        $googleDriveFolder = $this->video->google_drive_folder;
-
-
         ConvertVideoForStreaming::dispatch($this->video, $this->exportProgress);
 
-        return response($this->exportProgress->id);
+        return response()->json(['video_id' => $this->video->id, 'video_path' => $videoPath,'folder_path' => $folder ,'progress_id' => $this->exportProgress->id]);
     }
 
     public function getFile() {

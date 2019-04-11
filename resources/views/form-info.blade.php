@@ -12,7 +12,7 @@
     <style>
         .progress {
             position: relative;
-            width: 400px;
+            width: 100%;
             border: 1px solid #ddd;
             padding: 1px;
             border-radius: 3px;
@@ -34,7 +34,7 @@
     <div class="container">
         <h2>Chọn File và folder lưu để bắt đầu export cho stream</h2>
         <form action="./" method="POST" enctype="multipart/form-data" id="video-info-form">
-            {{ csrf_field() }}
+            @csrf
             <div class="form-group">
                 <label>Input File</label>
                 <select class="form-control" name="input-path" id="input-path">
@@ -60,10 +60,16 @@
 
             <button type="submit" class="btn btn-primary">Submit</button>
         </form>
-        <div class="progress">
-            <div class="bar"></div>
-            <div class="percent">0%</div>
+        <div class="export-list">
+            <div class="export-title"><h2>Danh sách File Export</h2></div>
+            <div class="export-container">
+
+            </div>
         </div>
+        
+        
+
+
     </div>
     <script>
         $('#input-path').on('change', function() {
@@ -82,28 +88,46 @@
             $('#google-drive-folder').val(recommendFolderName);
         })
 
-         $('#video-info-form').on('submit', function(event) {
+        var progressQueue = [];
+        var isQueueInActive = false;
+
+        setInterval(function() {
+            if (!isQueueInActive && progressQueue.length > 0) {
+                isQueueInActive = true;
+                let progress = progressQueue.shift();
+                let updateProgressBar = setInterval(async function() {
+                    let data = await $.get('./api/export-progress/' + progress.progress_id, function(data) {
+                        return data;
+                    });
+                    $('.progress[data-id="' + progress.progress_id + '"]>.bar').width(data.percentent_progress + '%');
+                    $('.progress[data-id="' + progress.progress_id + '"]>.percent').html(data.percentent_progress + '%');
+                    if (data.percentent_progress >= 100) {
+                        isQueueInActive = false;
+                        clearInterval(updateProgressBar);
+                    }
+                }, 2000);
+            }
+        }, 2000);
+
+        $('#video-info-form').on('submit', function(event) {
             var processId;
             event.preventDefault();
 
-            console.log($(this).serialize());
             (async function(serializeForm) {
-                processId = await $.post('./', serializeForm, function(data) {
+                let progress = await $.post('./', serializeForm, function(data) {
                     return data;
                 });
-                let updateProgressBar = setInterval(async function() {
-                    let data = await $.get('./api/export-progress/' + processId, function(data) {
-                        return data;
-                    });
-                    $('.bar').width(data.percentent_progress + '%');
-                    $('.percent').html(data.percentent_progress + '%');
-                    if (data.percentent_progress >= 100) {
-                        clearInterval(updateProgressBar);
-                    }
-                }, 1000)
+                progressQueue.push(progress);
+                let item = `<div class="export-item">
+                                <h4>${progress.video_path} => ${progress.folder_path}</h4>
+                                <div class="progress" data-id="${progress.progress_id}">
+                                    <div class="bar"></div>
+                                    <div class="percent">0%</div>
+                                </div>
+                            </div>`
+                $('.export-container').append(item);
             })($(this).serialize());
-
-        }) 
+        });
     </script>
 
 

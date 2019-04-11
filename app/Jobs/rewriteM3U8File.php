@@ -15,17 +15,18 @@ class rewriteM3U8File implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $googleDriveFolder, $rootPathFolder;
+    public $googleDriveFolder, $rootPathFolder, $disk;
 
     /**
      * Create a new job instance.
      *
      * @return void
      */
-    public function __construct($rootPathFolder ,$googleDriveFolder)
+    public function __construct($rootPathFolder ,$googleDriveFolder, $disk)
     {
         $this->rootPathFolder = $rootPathFolder;
         $this->googleDriveFolder = $googleDriveFolder;
+        $this->disk = $disk;
     }
 
     /**
@@ -38,7 +39,7 @@ class rewriteM3U8File implements ShouldQueue
         $folderLevel = explode('/', $this->googleDriveFolder);
         $previousDirectory = '/';
         $recursive = false; // Get subdirectories also?
-        $previousContents = collect(Storage::cloud()->listContents($previousDirectory, $recursive));
+        $previousContents = collect(Storage::disk($this->disk)->listContents($previousDirectory, $recursive));
 
         for ($i = 0; $i < count($folderLevel); $i++) {
             $nextDirectory = $previousContents->where('type', '=', 'dir')
@@ -48,7 +49,7 @@ class rewriteM3U8File implements ShouldQueue
                 return 'No directory name: '.$folderLevel[$i];
             } else {
                 $previousDirectory = $nextDirectory;
-                $previousContents = collect(Storage::cloud()->listContents($previousDirectory['path'], $recursive));
+                $previousContents = collect(Storage::disk($this->disk)->listContents($previousDirectory['path'], $recursive));
             }
         }
 
