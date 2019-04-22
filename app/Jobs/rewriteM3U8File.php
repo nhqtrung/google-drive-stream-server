@@ -10,6 +10,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use App\Jobs\putFileInDirGoogleDrive;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\File;
+use App\Helpers\GoogleDriveHelper;
 
 class rewriteM3U8File implements ShouldQueue
 {
@@ -36,26 +37,10 @@ class rewriteM3U8File implements ShouldQueue
      */
     public function handle()
     {
-        $folderLevel = explode('/', $this->googleDriveFolder);
-        $previousDirectory = '/';
-        $recursive = false; // Get subdirectories also?
-        $previousContents = collect(Storage::disk($this->disk)->listContents($previousDirectory, $recursive));
-
-        for ($i = 0; $i < count($folderLevel); $i++) {
-            $nextDirectory = $previousContents->where('type', '=', 'dir')
-                            ->where('filename', '=', $folderLevel[$i])
-                            ->first(); // There could be duplicate directory names!
-            if ( ! $nextDirectory ) {
-                return 'No directory name: '.$folderLevel[$i];
-            } else {
-                $previousDirectory = $nextDirectory;
-                $previousContents = collect(Storage::disk($this->disk)->listContents($previousDirectory['path'], $recursive));
-            }
-        }
-
+        $googleDriveFolder = new GoogleDriveHelper;
 
         // Get the files inside the folder...
-        $files = $previousContents->where('type', '=', 'file');
+        $files = $googleDriveFolder->getAllFileFromOriginnalPath($this->googleDriveFolder, $this->disk);
         
         $listFile = $files->mapWithKeys(function($file) {
             $filename = $file['filename'].'.'.$file['extension'];
@@ -64,7 +49,7 @@ class rewriteM3U8File implements ShouldQueue
             // dump($parsePath);
             $fileId = $parsePath[sizeof($parsePath) - 1];
 
-            $streamingLink = "http://localhost:8080/li1tv-cdn/public/hls/$fileId";
+            $streamingLink = "http://li1tv.vn/hls/$fileId";
 
             return [$filename => $streamingLink];
         });
@@ -80,7 +65,9 @@ class rewriteM3U8File implements ShouldQueue
 
                 Storage::disk('converted_videos')->put($item, $fileData);
 
-                putFileInDirGoogleDrive::dispatch($this->rootPathFolder.'/M3U8', 'index.m3u8', $filePath);
+                $folderPath = $googleDriveFolder->getFolderIdFromOriginalPath($this->rootPathFolder.'/M3U8', $this->disk);
+
+                putFileInDirGoogleDrive::dispatch($folderPath, 'index.m3u8', $filePath, $this->disk);
             }
         }
     }

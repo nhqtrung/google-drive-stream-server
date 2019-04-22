@@ -11,10 +11,7 @@
 |
 */
 
-Route::get('test', function () {
-    Storage::cloud()->put('test.txt', 'Hello World');
-    return 'File was saved to Google Drive';
-});
+Route::get('test', 'convertController@test');
 
 
 Route::get('hls_file', 'convertController@getFile');

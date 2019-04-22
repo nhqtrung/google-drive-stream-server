@@ -15,7 +15,7 @@ use App\Jobs\rewriteM3U8File;
 use App\Jobs\ConvertVideoForStreaming;
 use App\Video;
 use App\Export_progress;
-
+use App\Helpers\GoogleDriveHelper;
 class convertController extends Controller
 {
     private $generator;
@@ -84,5 +84,10 @@ class convertController extends Controller
     public function VideoExportProgressAPI($progressId) {
         $exportProgress = Export_progress::find($progressId);
         return response()->json(['videoId' => $exportProgress->idVideo, 'percentent_progress' => $exportProgress->percentent_progress]);
+    }
+
+    public function test() {
+        $googleDriveHelper = new GoogleDriveHelper;
+        dd($googleDriveHelper->getFolderIdFromOriginalPath('phim','google'));
     }
 }

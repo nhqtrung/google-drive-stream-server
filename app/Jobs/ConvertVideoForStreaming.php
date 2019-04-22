@@ -16,6 +16,7 @@ use App\Jobs\rewriteM3U8File;
 use App\Export_progress;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\File;
+use App\Helpers\GoogleDriveHelper;
 
 class ConvertVideoForStreaming implements ShouldQueue
 {
@@ -36,43 +37,48 @@ class ConvertVideoForStreaming implements ShouldQueue
         $inputPath = $this->video->input_path;
         $folder = $this->video->output_path;
         $googleDriveFolder = $this->video->google_drive_folder;
+        $googleDriveHelper = new GoogleDriveHelper;
 
         // create some video formats...
-        $lowBitrateFormat  = (new X264('aac'))->setKiloBitrate(3000);
-        $midBitrateFormat  = (new X264('aac'))->setKiloBitrate(4800);
-        $highBitrateFormat = (new X264('aac'))->setKiloBitrate(8000);
+        $lowBitrateFormat  = (new X264('aac'))->setKiloBitrate(750);
+        $midBitrateFormat  = (new X264('aac'))->setKiloBitrate(2400);
+        $highBitrateFormat = (new X264('aac'))->setKiloBitrate(4200);
 
         $ffmpegExportHLS = FFMpeg::fromDisk('videos')
             ->open($inputPath)
             ->addFilter(function ($filters) {
-                $filters->resize(new \FFMpeg\Coordinate\Dimension(1920, 1080));
+                $filters->resize(new \FFMpeg\Coordinate\Dimension(854, 480));
             });
 
-        // if (!empty($this->video->watermark)) {
-        //     $ffmpegExportHLS->addFilter(function ($filters) {
-        //         $watermarkPath = $this->video->watermark;
-        //         $filters->watermark($watermarkPath, [
-        //             'position' => 'relative',
-        //             'bottom' => 0,
-        //             'right' => 0,
-        //         ]);
-        //     });
-        // }
+        if (!empty($this->video->watermark)) {
+            $ffmpegExportHLS->addFilter(function ($filters) {
+                $watermarkPath = $this->video->watermark;
+                $filters->watermark($watermarkPath, [
+                    'position' => 'relative',
+                    'bottom' => 0,
+                    'right' => 0,
+                ]);
+            });
+        }
 
 
         $ffmpegExportHLS->exportForHLS()
+            ->setSegmentLength(5)
             ->onProgress(function ($percentage) {
                 $this->export_progress->percentent_progress = $percentage;
                 $this->export_progress->save();
             })
             ->toDisk('converted_videos')
-            // ->addFormat($lowBitrateFormat)
-            // ->addFormat($midBitrateFormat)
             ->addFormat($lowBitrateFormat)
+            // ->addFormat($midBitrateFormat)
+            // ->addFormat($lowBitrateFormat)
             ->save($folder.'/EncryptedDocument_T5.m3u8');
 
         $this->export_progress->percentent_progress = 100;
         $this->export_progress->save();
+
+        $mainDiskFolderId = $googleDriveHelper->getFolderIdFromOriginalPath($googleDriveFolder, $mainDisk);
+        $backupDiskFolderId = $googleDriveHelper->getFolderIdFromOriginalPath($googleDriveFolder, $backupDisk);
 
         $this->video->status = "Export for HLS Completed. On uploading google process";
         $this->video->save();
@@ -91,8 +97,8 @@ class ConvertVideoForStreaming implements ShouldQueue
                 $fileExtension = 'txt';
                 $filePath = $storagePath.$file;
                 $relativeFileName = $fileName.'.'.$fileExtension;
-                // putFileInDirGoogleDrive::dispatch($googleDriveFolder, $relativeFileName, $filePath, $mainDisk);
-                // putFileInDirGoogleDrive::dispatch($googleDriveFolder, $relativeFileName, $filePath, $backupDisk);
+                putFileInDirGoogleDrive::dispatch($mainDiskFolderId, $relativeFileName, $filePath, $mainDisk);
+                putFileInDirGoogleDrive::dispatch($backupDiskFolderId, $relativeFileName, $filePath, $backupDisk);
             }
             $this->video->status = "Upload all segment file TS to Google Drive";
             $this->video->save();
@@ -107,7 +113,7 @@ class ConvertVideoForStreaming implements ShouldQueue
             }
         }
 
-        // rewriteM3U8File::dispatch($folder, $googleDriveFolder, $mainDisk);
-        // rewriteM3U8File::dispatch($folder, $googleDriveFolder, $backupDisk);
+        rewriteM3U8File::dispatch($folder, $googleDriveFolder, $mainDisk);
+        rewriteM3U8File::dispatch($folder, $googleDriveFolder, $backupDisk);
     }
 }
